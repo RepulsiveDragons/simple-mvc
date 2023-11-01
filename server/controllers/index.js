@@ -4,6 +4,8 @@ const models = require('../models');
 // get the Cat model
 const { Cat } = models;
 
+const { Dog } = models; 
+
 // default fake data so that we have something to work with until we make a real Cat
 const defaultData = {
   name: 'unknown',
@@ -234,7 +236,35 @@ const updateLast = (req, res) => {
   });
 };
 
-// A function to send back the 404 page.
+//adds a new dog to the database
+const setDog = async (req, res) => {
+     if (!req.body.dogName || !req.body.breed || !req.body.age) {
+      return res.status(400).json({ error: 'name, breed, and age are all required' });
+    }
+  
+    const dogData = {
+      name: `${req.body.dogName}`,
+      breed: `${req.body.breed}`,
+      age: req.body.age,
+    };
+  
+    const newDog = new Dog(dogData);
+  
+    try {
+      await newDog.save();
+    } catch (err) {
+
+      console.log(err);
+      return res.status(500).json({ error: 'failed to create dog' });
+    }
+  
+    return res.json({
+      name: `${req.body.dogName}`,
+      breed: `${req.body.breed}`,
+      age: req.body.age,
+    });
+}
+
 const notFound = (req, res) => {
   res.status(404).render('notFound', {
     page: req.url,
@@ -251,5 +281,6 @@ module.exports = {
   setName,
   updateLast,
   searchName,
+  setDog,
   notFound,
 };
