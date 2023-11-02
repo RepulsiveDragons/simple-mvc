@@ -2,9 +2,7 @@
 const models = require('../models');
 
 // get the Cat model
-const { Cat } = models;
-
-const { Dog } = models; 
+const { Cat, Dog } = models;
 
 // default fake data so that we have something to work with until we make a real Cat
 const defaultData = {
@@ -83,6 +81,16 @@ const hostPage2 = (req, res) => {
 // Function to render the untemplated page3.
 const hostPage3 = (req, res) => {
   res.render('page3');
+};
+
+const hostPage4 = async (req, res) => {
+  try {
+    const docs = await Dog.find({}).lean().exec();
+    return res.render('page4', { dogs: docs });
+  } catch (err) {
+    console.log(err);
+    return res.status(500).json({ error: 'failed to find dogs' });
+  }
 };
 
 // Get name will return the name of the last added cat.
@@ -236,39 +244,66 @@ const updateLast = (req, res) => {
   });
 };
 
-//adds a new dog to the database
+// adds a new dog to the database
 const setDog = async (req, res) => {
-     if (!req.body.dogName || !req.body.breed || !req.body.age) {
-      return res.status(400).json({ error: 'name, breed, and age are all required' });
-    }
-  
-    const dogData = {
-      name: `${req.body.dogName}`,
-      breed: `${req.body.breed}`,
-      age: req.body.age,
-    };
-  
-    const newDog = new Dog(dogData);
-  
-    try {
-      await newDog.save();
-    } catch (err) {
+  if (!req.body.dogName || !req.body.breed || !req.body.age) {
+    return res.status(400).json({ error: 'name, breed, and age are all required' });
+  }
 
-      console.log(err);
-      return res.status(500).json({ error: 'failed to create dog' });
-    }
-  
-    return res.json({
-      name: `${req.body.dogName}`,
-      breed: `${req.body.breed}`,
-      age: req.body.age,
-    });
-}
+  const dogData = {
+    name: `${req.body.dogName}`,
+    breed: `${req.body.breed}`,
+    age: req.body.age,
+  };
+
+  const newDog = new Dog(dogData);
+
+  try {
+    await newDog.save();
+  } catch (err) {
+    console.log(err);
+    return res.status(500).json({ error: 'failed to create dog' });
+  }
+
+  return res.json({
+    name: `${req.body.dogName}`,
+    breed: `${req.body.breed}`,
+    age: req.body.age,
+  });
+};
 
 const notFound = (req, res) => {
   res.status(404).render('notFound', {
     page: req.url,
   });
+};
+
+const searchDog = async (req, res) => {
+  if (!req.query.name) {
+    return res.status(400).json({ error: 'Name is required to perform a search' });
+  }
+
+  let doc;
+
+  try {
+    doc = await Dog.findOne({ name: req.query.name }).exec();
+  } catch (err) {
+    console.log(err);
+    return res.status(500).json({ error: 'Something went wrong' });
+  }
+
+  try {
+    doc.$inc('age', 1);
+    await doc.save();
+  } catch (err) {
+    console.log(err);
+    return res.status(500).json({ error: 'Something went wrong' });
+  }
+
+  if (!doc) {
+    return res.json({ error: 'No dogs found' });
+  }
+  return res.json({ name: doc.name, breed: doc.breed, age: doc.age });
 };
 
 // export the relevant public controller functions
@@ -277,10 +312,12 @@ module.exports = {
   page1: hostPage1,
   page2: hostPage2,
   page3: hostPage3,
+  page4: hostPage4,
   getName,
   setName,
   updateLast,
   searchName,
   setDog,
+  searchDog,
   notFound,
 };
